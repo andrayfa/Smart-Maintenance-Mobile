@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Maintenance Mobile · CMMS</title>
+<style>
+  :root{
+    --bg:#EEF2F8; --surface:#FFFFFF; --text:#152037; --muted:#6B7889;
+    --shadow:0 6px 18px rgba(20,40,80,0.08); --grid:#E4E9F1;
+    --primary:#1565C0; --primaryDark:#0D47A1; --primarySoft:#E3EEFC;
+    --success:#2E7D32; --successSoft:#E6F4EA;
+    --danger:#C62828; --dangerSoft:#FCE8E7;
+    --warning:#ED8936; --warningSoft:#FDEEDB;
+  }
+  .dark{
+    --bg:#10141C; --surface:#1B222D; --text:#EEF2F7; --muted:#8B96A5;
+    --shadow:0 6px 18px rgba(0,0,0,0.35); --grid:#2A3340;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+  .page{
+    width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 0;
+    background:radial-gradient(circle at 20% 10%, #1E3A5F 0%, #0B111C 55%);
+    position:relative; overflow:hidden;
+  }
+  .page::before{
+    content:"";position:absolute;inset:0;opacity:.06;pointer-events:none;
+    background-image:linear-gradient(#5EA0E6 1px, transparent 1px), linear-gradient(90deg,#5EA0E6 1px, transparent 1px);
+    background-size:26px 26px;
+  }
+  .phone{
+    position:relative;width:380px;height:760px;border-radius:42px;padding:10px;
+    background:#0B0F14;box-shadow:0 30px 60px rgba(0,0,0,.5);
+  }
+  .screen{
+    width:100%;height:100%;border-radius:32px;overflow:hidden;position:relative;
+    display:flex;flex-direction:column;background:var(--bg);
+  }
+  .statusbar{
+    height:36px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;
+    padding:0 24px;font-size:11px;font-weight:600;color:#fff;
+  }
+  .statusbar.on{background:var(--surface);color:var(--text);}
+  .content{flex:1;overflow-y:auto;position:relative;}
+  .content::-webkit-scrollbar{width:0;}
+  .topbar{position:sticky;top:0;z-index:5;padding:12px 16px;background:var(--surface);}
+  .topbar .title{font-size:17px;font-weight:800;color:var(--text);line-height:1.2;}
+  .topbar .subtitle{font-size:12px;color:var(--muted);}
+  .px{padding-left:16px;padding-right:16px;}
+  .card{background:var(--surface);box-shadow:var(--shadow);border-radius:16px;padding:12px;}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+  .grid4{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:8px;}
+  .stat-icon{width:32px;height:32px;border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:8px;}
+  .stat-val{font-size:19px;font-weight:800;color:var(--text);line-height:1;}
+  .stat-label{font-size:11px;color:var(--muted);margin-top:4px;}
+  .pill{font-size:11px;font-weight:600;padding:4px 8px;border-radius:999px;white-space:nowrap;}
+  .btn-primary{width:100%;padding:12px;border:none;border-radius:12px;background:var(--primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer;}
+  .btn-ghost{width:100%;padding:10px;border:none;border-radius:12px;background:var(--bg);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+  input,select,textarea{
+    width:100%;font-size:13px;border-radius:12px;padding:10px 12px;outline:none;border:none;
+    background:var(--bg);color:var(--text);font-family:inherit;
+  }
+  .field-label{font-size:11px;font-weight:600;color:var(--muted);margin-bottom:4px;}
+  .field{margin-bottom:12px;}
+  .fab{
+    position:absolute;right:16px;bottom:84px;width:52px;height:52px;border-radius:16px;
+    background:var(--primary);border:none;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 8px 20px rgba(21,101,192,.4);cursor:pointer;
+  }
+  .modal-backdrop{position:absolute;inset:0;z-index:30;background:rgba(10,14,20,.5);display:flex;align-items:flex-end;}
+  .modal-sheet{width:100%;max-height:85%;overflow-y:auto;background:var(--surface);border-radius:24px 24px 0 0;padding:16px;}
+  .searchbar{display:flex;align-items:center;gap:8px;background:var(--surface);box-shadow:var(--shadow);border-radius:12px;padding:10px 12px;margin-bottom:12px;}
+  .searchbar input{background:transparent;flex:1;padding:0;}
+  .navbar{height:68px;flex-shrink:0;display:flex;align-items:center;justify-content:space-around;background:var(--surface);border-top:1px solid var(--bg);}
+  .navitem{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;cursor:pointer;padding:4px 8px;}
+  .navdot{width:4px;height:4px;border-radius:50%;}
+  .tabbtn{flex:1;font-size:11px;font-weight:600;padding:8px;border-radius:12px;border:none;box-shadow:var(--shadow);cursor:pointer;}
+  .toast{position:fixed;bottom:96px;left:50%;transform:translateX(-50%);background:#1A2233;color:#fff;font-size:11px;padding:8px 16px;border-radius:999px;}
+  .toggle{width:44px;height:24px;border-radius:999px;border:none;position:relative;cursor:pointer;}
+  .toggle .knob{position:absolute;top:2px;width:20px;height:20px;border-radius:50%;background:#fff;transition:left .15s;}
+  .mono{font-family:'SF Mono',Consolas,monospace;}
+  .row{display:flex;align-items:center;justify-content:space-between;}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="phone">
+    <div class="screen" id="screen"></div>
+  </div>
+</div>
+
+<script>
+/* ---------------- Icons (inline SVG, stroke = currentColor) ---------------- */
+const ICONS = {
+  home:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/>',
+  box:'<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+  wrench:'<path d="M14.7 6.3a4 4 0 0 0-5.6 5.6L3 18l3 3 6.1-6.1a4 4 0 0 0 5.6-5.6l-2.6 2.6-2-2Z"/>',
+  package:'<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+  chart:'<path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.9l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.9-.3 1.7 1.7 0 0 0-1 1.6V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.6 1.7 1.7 0 0 0-1.9.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.9 1.7 1.7 0 0 0-1.6-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.6-1 1.7 1.7 0 0 0-.3-1.9l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.9.3H9a1.7 1.7 0 0 0 1-1.6V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.6 1.7 1.7 0 0 0 1.9-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.9V9a1.7 1.7 0 0 0 1.6 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.6 1Z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  search:'<circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>',
+  filter:'<path d="M4 4h16l-6 8v6l-4 2v-8Z"/>',
+  chevron:'<path d="m9 6 6 6-6 6"/>',
+  clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/>',
+  camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4Z"/><circle cx="12" cy="13" r="3.5"/>',
+  moon:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8Z"/>',
+  sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/>',
+  qr:'<rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3M20 14v3h-3M14 20h3M20 20h1"/>',
+  alert:'<path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 2.4 18a2 2 0 0 0 1.7 3h15.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/>',
+  check:'<path d="m20 6-11 11-5-5"/>',
+  file:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/>',
+  activity:'<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>',
+  gauge:'<path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M12 12 16 8"/><path d="M4.5 19a9 9 0 1 1 15 0"/>',
+};
+function icon(name, size=16, color='currentColor'){
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${ICONS[name]}</svg>`;
+}
+
+/* ---------------- Mock data ---------------- */
+let state = {
+  loggedIn:false, view:'dashboard', dark:false, modal:null, toast:'',
+  loginErr:'', machineQuery:'', woTab:'Preventive',
+  machines:[
+    {id:'MC-001',name:'Conveyor Belt Line A',cat:'Conveyor',dept:'Produksi',loc:'Line A - Bay 1',brand:'Interroll',status:'Running',year:2019},
+    {id:'MC-002',name:'CNC Milling X200',cat:'CNC',dept:'Machining',loc:'Workshop 2',brand:'Haas',status:'Maintenance',year:2021},
+    {id:'MC-003',name:'Air Compressor 15kW',cat:'Compressor',dept:'Utility',loc:'Utility Room',brand:'Atlas Copco',status:'Running',year:2018},
+    {id:'MC-004',name:'Hydraulic Press P4',cat:'Press',dept:'Produksi',loc:'Line B - Bay 3',brand:'Schuler',status:'Breakdown',year:2016},
+    {id:'MC-005',name:'Cooling Tower CT-2',cat:'HVAC',dept:'Utility',loc:'Rooftop',brand:'Baltimore',status:'Idle',year:2020},
+  ],
+  wo:[
+    {id:'WO-2026-041',type:'Preventive',machine:'MC-001',tech:'Andra S.',date:'2026-07-02',status:'Done',downtime:0},
+    {id:'WO-2026-042',type:'Breakdown',machine:'MC-004',tech:'Rizky P.',date:'2026-07-05',status:'Progress',downtime:6.5},
+    {id:'WO-2026-043',type:'Preventive',machine:'MC-003',tech:'Andra S.',date:'2026-07-04',status:'Done',downtime:0},
+    {id:'WO-2026-044',type:'Predictive',machine:'MC-002',tech:'Nadia K.',date:'2026-07-06',status:'Open',downtime:0},
+    {id:'WO-2026-039',type:'Breakdown',machine:'MC-002',tech:'Rizky P.',date:'2026-06-21',status:'Closed',downtime:3.2},
+    {id:'WO-2026-036',type:'Breakdown',machine:'MC-005',tech:'Nadia K.',date:'2026-06-14',status:'Closed',downtime:4.8},
+  ],
+  inventory:[
+    {id:'SP-1001',name:'Bearing 6204ZZ',cat:'Bearing',stock:42,min:20,unit:'pcs',price:45000},
+    {id:'SP-1002',name:'V-Belt A38',cat:'Belt',stock:6,min:10,unit:'pcs',price:85000},
+    {id:'SP-1003',name:'Hydraulic Oil ISO 46',cat:'Lubricant',stock:30,min:15,unit:'liter',price:62000},
+    {id:'SP-1004',name:'Filter Udara Compressor',cat:'Filter',stock:3,min:8,unit:'pcs',price:120000},
+  ],
+  monthly:[
+    {b:'Feb',PM:8,BD:3},{b:'Mar',PM:10,BD:2},{b:'Apr',PM:9,BD:4},
+    {b:'Mei',PM:11,BD:2},{b:'Jun',PM:12,BD:5},{b:'Jul',PM:6,BD:1},
+  ],
+};
+
+const COLOR = {
+  Running:'var(--success)', Idle:'var(--warning)', Breakdown:'var(--danger)', Maintenance:'var(--primary)',
+};
+const SOFT = {
+  Running:'var(--successSoft)', Idle:'var(--warningSoft)', Breakdown:'var(--dangerSoft)', Maintenance:'var(--primarySoft)',
+};
+const WOCOLOR = {Open:'var(--warning)',Progress:'var(--primary)',Done:'var(--success)',Closed:'#64748B'};
+
+function pill(text,color,soft){return `<span class="pill" style="color:${color};background:${soft}">${text}</span>`;}
+
+/* ---------------- Chart helpers (pure SVG) ---------------- */
+function barChart(data, keys, colors, w=340, h=140){
+  const max = Math.max(1, ...data.flatMap(d=>keys.map(k=>d[k])));
+  const bw = (w / data.length) / (keys.length+1.2);
+  let bars='', labels='';
+  data.forEach((d,i)=>{
+    const groupX = i*(w/data.length);
+    keys.forEach((k,j)=>{
+      const val=d[k]; const barH = (val/max)*(h-24);
+      const x = groupX + j*bw + 6;
+      bars += `<rect x="${x}" y="${h-24-barH}" width="${bw-4}" height="${barH}" rx="3" fill="${colors[j]}"/>`;
+    });
+    labels += `<text x="${groupX+(w/data.length)/2}" y="${h-6}" font-size="10" fill="var(--muted)" text-anchor="middle">${d.b||d.name}</text>`;
+  });
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}">${bars}${labels}</svg>`;
+}
+function hBarChart(data,color,w=340,h=150){
+  const max = Math.max(1,...data.map(d=>d.val));
+  const rowH = h/data.length;
+  let bars='';
+  data.forEach((d,i)=>{
+    const y=i*rowH+6; const barW=(d.val/max)*(w-70);
+    bars+=`<text x="0" y="${y+rowH/2-6+8}" font-size="10" fill="var(--muted)">${d.name}</text>`;
+    bars+=`<rect x="52" y="${y}" width="${barW}" height="${rowH-14}" rx="5" fill="${color}"/>`;
+    bars+=`<text x="${52+barW+6}" y="${y+rowH/2-6+8}" font-size="10" fill="var(--text)">${d.val}</text>`;
+  });
+  return `<svg width="100%" height="${h}" viewBox="0 0 ${w} ${h}">${bars}</svg>`;
+}
+function pieChart(data, size=100){
+  const total = data.reduce((a,b)=>a+b.value,0)||1;
+  let angle=-90, paths='';
+  const r=size/2, cx=r, cy=r, ir=r*0.6;
+  data.forEach(d=>{
+    const slice=(d.value/total)*360;
+    const a1=angle*Math.PI/180, a2=(angle+slice)*Math.PI/180;
+    const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1);
+    const x2=cx+r*Math.cos(a2), y2=cy+r*Math.sin(a2);
+    const ix1=cx+ir*Math.cos(a1), iy1=cy+ir*Math.sin(a1);
+    const ix2=cx+ir*Math.cos(a2), iy2=cy+ir*Math.sin(a2);
+    const large = slice>180?1:0;
+    paths+=`<path d="M${x1} ${y1} A${r} ${r} 0 ${large} 1 ${x2} ${y2} L${ix2} ${iy2} A${ir} ${ir} 0 ${large} 0 ${ix1} ${iy1} Z" fill="${d.color}"/>`;
+    angle+=slice;
+  });
+  return `<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${paths}</svg>`;
+}
+
+/* ---------------- Views ---------------- */
+function viewLogin(){
+  return `
+  <div style="height:100%;display:flex;flex-direction:column;justify-content:center;padding:0 28px;
+    background:linear-gradient(180deg,var(--primaryDark),var(--primary) 55%, var(--bg))">
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:40px">
+      <div style="width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;
+        background:rgba(255,255,255,.15);margin-bottom:16px">${icon('gauge',30,'#fff')}</div>
+      <div style="color:#fff;font-size:20px;font-weight:800">Smart Maintenance</div>
+      <div style="color:rgba(255,255,255,.7);font-size:12px;letter-spacing:2px;margin-top:2px" class="mono">MOBILE · CMMS</div>
+    </div>
+    <div class="card" style="border-radius:24px;padding:20px">
+      <div class="field"><div class="field-label">USERNAME</div><input id="loginUser" placeholder="admin"></div>
+      <div class="field"><div class="field-label">PASSWORD</div><input id="loginPass" type="password" placeholder="123"></div>
+      ${state.loginErr?`<div style="color:var(--danger);font-size:11px;margin-bottom:8px">${state.loginErr}</div>`:''}
+      <button class="btn-primary" onclick="doLogin()">Masuk</button>
+      <div style="text-align:center;font-size:11px;color:var(--muted);margin-top:12px">Demo akun — <span class="mono">admin / 123</span></div>
+    </div>
+  </div>`;
+}
+
+function viewDashboard(){
+  const m=state.machines, wo=state.wo;
+  const active=m.filter(x=>x.status==='Running').length;
+  const broken=m.filter(x=>x.status==='Breakdown').length;
+  const pm=wo.filter(w=>w.type==='Preventive').length;
+  const bd=wo.filter(w=>w.type==='Breakdown').length;
+  const pred=wo.filter(w=>w.type==='Predictive').length;
+  const pieData=['Running','Idle','Breakdown','Maintenance'].map(s=>({name:s,value:m.filter(x=>x.status===s).length,color:COLOR[s]})).filter(d=>d.value>0);
+
+  const stat=(label,val,ic,color)=>`
+    <div class="card">
+      <div class="stat-icon" style="background:${color}1A"><span style="color:${color}">${icon(ic,16,color)}</span></div>
+      <div class="stat-val">${val}</div><div class="stat-label">${label}</div>
+    </div>`;
+
+  return `
+  <div class="px" style="padding-bottom:16px">
+    <div style="font-size:12px;color:var(--muted)">Selamat datang,</div>
+    <div style="font-size:18px;font-weight:800;color:var(--text);margin-bottom:16px">Andra · Teknisi</div>
+
+    <div class="grid2" style="margin-bottom:12px">
+      ${stat('Jumlah Mesin', m.length, 'box','var(--primary)')}
+      ${stat('Mesin Aktif', active, 'check','var(--success)')}
+      ${stat('Mesin Rusak', broken, 'alert','var(--danger)')}
+      ${stat('Total Work Order', wo.length, 'file','var(--warning)')}
+    </div>
+    <div class="grid3" style="margin-bottom:12px">
+      ${stat('PM bulan ini', pm, 'wrench','var(--primary)')}
+      ${stat('Breakdown', bd, 'activity','var(--danger)')}
+      ${stat('Predictive', pred, 'chart','var(--success)')}
+    </div>
+
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Maintenance per Bulan</div>
+      ${barChart(state.monthly.map(x=>({b:x.b,PM:x.PM,BD:x.BD})),['PM','BD'],['var(--primary)','var(--danger)'])}
+    </div>
+
+    <div class="card" style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Status Mesin</div>
+      <div style="display:flex;align-items:center;gap:12px">
+        ${pieChart(pieData,100)}
+        <div style="flex:1;display:flex;flex-direction:column;gap:6px">
+          ${pieData.map(d=>`<div class="row" style="font-size:11px">
+            <span style="display:flex;align-items:center;gap:6px;color:var(--text)"><span style="width:8px;height:8px;border-radius:50%;background:${d.color}"></span>${d.name}</span>
+            <span class="mono" style="font-weight:700;color:var(--muted)">${d.value}</span></div>`).join('')}
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Menu Cepat</div>
+    <div class="grid4">
+      ${[['Mesin','box','machines'],['Maintenance','wrench','workorders'],['Inventory','package','inventory'],['KPI','chart','kpi']]
+        .map(([l,ic,v])=>`<button class="card" style="border:none;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer" onclick="go('${v}')">
+          <span style="color:var(--primary)">${icon(ic,17)}</span><span style="font-size:10px;font-weight:600;color:var(--text)">${l}</span></button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function viewMachines(){
+  const q=state.machineQuery.toLowerCase();
+  const list=state.machines.filter(m=>(m.name+m.id).toLowerCase().includes(q));
+  return `
+  <div class="px" style="padding-bottom:16px;position:relative;min-height:100%">
+    <div class="searchbar">
+      ${icon('search',15)}<input id="machineSearch" placeholder="Cari mesin, kode, lokasi..." value="${state.machineQuery}" oninput="state.machineQuery=this.value;render()">
+      <span style="color:var(--muted)">${icon('filter',15)}</span>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${list.map(m=>`
+        <div class="card">
+          <div class="row" style="align-items:flex-start">
+            <div>
+              <div class="mono" style="font-size:11px;font-weight:700;color:var(--primary)">${m.id}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px">${m.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${m.dept} · ${m.loc}</div>
+            </div>
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+              ${pill(m.status,COLOR[m.status],SOFT[m.status])}
+              <span style="color:var(--muted)">${icon('qr',16)}</span>
+            </div>
+          </div>
+        </div>`).join('') || `<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:12px">Mesin tidak ditemukan.</div>`}
+    </div>
+    <button class="fab" onclick="openModal('machine')">${icon('plus',22,'#fff')}</button>
+  </div>`;
+}
+
+function viewWorkOrders(){
+  const list=state.wo.filter(w=>w.type===state.woTab);
+  return `
+  <div class="px" style="padding-bottom:16px;position:relative;min-height:100%">
+    <div style="display:flex;gap:8px;margin-bottom:12px">
+      ${['Preventive','Breakdown','Predictive'].map(t=>`
+        <button class="tabbtn" style="background:${state.woTab===t?'var(--primary)':'var(--surface)'};color:${state.woTab===t?'#fff':'var(--muted)'}"
+          onclick="state.woTab='${t}';render()">${t}</button>`).join('')}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${list.map(w=>{
+        const mach=state.machines.find(m=>m.id===w.machine);
+        return `<div class="card">
+          <div class="row" style="align-items:flex-start">
+            <div>
+              <div class="mono" style="font-size:11px;font-weight:700;color:var(--primary)">${w.id}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px">${mach?mach.name:w.machine}</div>
+              <div style="font-size:11px;color:var(--muted);display:flex;align-items:center;gap:4px">${icon('clock',11)} ${w.date} · ${w.tech}</div>
+            </div>
+            ${pill(w.status,WOCOLOR[w.status],WOCOLOR[w.status]+'1A')}
+          </div>
+          ${w.downtime>0?`<div class="mono" style="font-size:11px;margin-top:8px;color:var(--danger)">Downtime: ${w.downtime} jam</div>`:''}
+        </div>`;
+      }).join('') || `<div style="text-align:center;padding:40px 0;color:var(--muted);font-size:12px">Belum ada work order ${state.woTab}.</div>`}
+    </div>
+    <button class="fab" onclick="openModal('wo')">${icon('plus',22,'#fff')}</button>
+  </div>`;
+}
+
+function viewInventory(){
+  return `
+  <div class="px" style="padding-bottom:16px;position:relative;min-height:100%">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${state.inventory.map(s=>{
+        const low=s.stock<=s.min;
+        const pct=Math.min(100,Math.round((s.stock/Math.max(s.min*2,1))*100));
+        return `<div class="card">
+          <div class="row" style="align-items:flex-start;margin-bottom:8px">
+            <div>
+              <div class="mono" style="font-size:11px;font-weight:700;color:var(--primary)">${s.id}</div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-top:2px">${s.name}</div>
+              <div style="font-size:11px;color:var(--muted)">${s.cat} · Rp${s.price.toLocaleString('id-ID')}/${s.unit}</div>
+            </div>
+            ${low?pill('Stok Rendah','var(--danger)','var(--dangerSoft)'):''}
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="flex:1;height:6px;border-radius:999px;overflow:hidden;background:var(--bg)">
+              <div style="height:100%;border-radius:999px;width:${pct}%;background:${low?'var(--danger)':'var(--success)'}"></div>
+            </div>
+            <span class="mono" style="font-size:11px;font-weight:700;color:var(--text)">${s.stock} ${s.unit}</span>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+    <button class="fab" onclick="openModal('sparepart')">${icon('plus',22,'#fff')}</button>
+  </div>`;
+}
+
+function viewKPI(){
+  const wo=state.wo, m=state.machines;
+  const bds=wo.filter(w=>w.type==='Breakdown');
+  const totalDown=bds.reduce((a,b)=>a+b.downtime,0);
+  const opHours=m.length*24*30;
+  const mtbf=bds.length?(opHours-totalDown)/bds.length:0;
+  const mttr=bds.length?totalDown/bds.length:0;
+  const mttf=bds.length?opHours/bds.length:0;
+  const avail=(mtbf+mttr)>0?(mtbf/(mtbf+mttr))*100:100;
+  const perMachine=m.map(x=>({name:x.id,val:wo.filter(w=>w.machine===x.id&&w.type==='Breakdown').reduce((a,b)=>a+b.downtime,0)}));
+
+  const stat=(label,val,ic,color)=>`<div class="card">
+    <div class="stat-icon" style="background:${color}1A"><span style="color:${color}">${icon(ic,16,color)}</span></div>
+    <div class="stat-val">${val}</div><div class="stat-label">${label}</div></div>`;
+
+  return `
+  <div class="px" style="padding-bottom:16px">
+    <div class="grid2" style="margin-bottom:12px">
+      ${stat('MTBF (jam)', mtbf.toFixed(0), 'activity','var(--primary)')}
+      ${stat('MTTR (jam)', mttr.toFixed(1), 'wrench','var(--warning)')}
+      ${stat('MTTF (jam)', mttf.toFixed(0), 'chart','var(--success)')}
+      ${stat('Availability', avail.toFixed(1)+'%', 'gauge','var(--primary)')}
+    </div>
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-size:12px;font-weight:700;color:var(--text)">Total Downtime</div>
+      <div class="mono" style="font-size:22px;font-weight:800;color:var(--danger)">${totalDown.toFixed(1)} jam</div>
+      <div style="font-size:11px;color:var(--muted)">Dari ${bds.length} kejadian breakdown bulan ini</div>
+    </div>
+    <div class="card">
+      <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px">Downtime per Mesin</div>
+      ${hBarChart(perMachine,'var(--danger)')}
+    </div>
+    <div class="mono" style="font-size:10px;margin-top:12px;color:var(--muted);line-height:1.6">
+      MTBF = Waktu Operasi / Jumlah Failure · MTTR = Waktu Perbaikan / Jumlah Repair<br>
+      Availability = MTBF / (MTBF + MTTR)
+    </div>
+  </div>`;
+}
+
+function viewReports(){
+  return `
+  <div class="px" style="padding-bottom:16px">
+    <div class="card" style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px">Laporan Bulanan · Juli 2026</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:12px">${state.wo.length} work order · ${state.machines.length} mesin terdaftar</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn-primary" style="display:flex;align-items:center;justify-content:center;gap:6px" onclick="exportCsv()">${icon('file',14,'#fff')} Export Excel</button>
+        <button class="btn-ghost" onclick="exportCsv()">${icon('file',14)} Export PDF</button>
+      </div>
+    </div>
+    ${['Harian','Mingguan','Tahunan'].map(p=>`<div class="card row" style="margin-bottom:8px">
+      <span style="font-size:12px;font-weight:600;color:var(--text)">Laporan ${p}</span>
+      <span style="color:var(--muted)">${icon('chevron',15)}</span></div>`).join('')}
+    ${state.toast?`<div class="toast">${state.toast}</div>`:''}
+  </div>`;
+}
+
+function viewSettings(){
+  return `
+  <div class="px" style="padding-bottom:16px">
+    <div class="card" style="padding:4px;margin-bottom:12px">
+      <div class="row" style="padding:12px">
+        <span style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--text)">
+          ${icon(state.dark?'moon':'sun',15)} Mode Gelap</span>
+        <button class="toggle" style="background:${state.dark?'var(--primary)':'#CBD5E1'}" onclick="toggleDark()">
+          <span class="knob" style="left:${state.dark?22:2}px"></span></button>
+      </div>
+    </div>
+    ${['Bahasa: Indonesia','Backup Database','Restore Database','Sinkronisasi Cloud'].map(l=>`
+      <div class="card row" style="margin-bottom:8px">
+        <span style="font-size:13px;font-weight:600;color:var(--text)">${l}</span>
+        <span style="color:var(--muted)">${icon('chevron',15)}</span></div>`).join('')}
+    <button class="btn-ghost" style="background:var(--dangerSoft);color:var(--danger);margin-top:12px;font-weight:700;padding:12px"
+      onclick="doLogout()">${icon('logout',15)} Keluar</button>
+  </div>`;
+}
+
+/* ---------------- Modals ---------------- */
+function viewModal(){
+  if(!state.modal) return '';
+  if(state.modal==='machine') return `
+    <div class="modal-backdrop"><div class="modal-sheet">
+      <div class="row" style="margin-bottom:12px">
+        <div style="font-size:15px;font-weight:700;color:var(--text)">Tambah Mesin</div>
+        <button onclick="closeModal()" style="background:var(--bg);border:none;width:28px;height:28px;border-radius:50%;color:var(--text);cursor:pointer">${icon('x',14)}</button>
+      </div>
+      <div class="field"><div class="field-label">Nama Mesin</div><input id="f_name"></div>
+      <div class="grid2">
+        <div class="field"><div class="field-label">Kategori</div><input id="f_cat"></div>
+        <div class="field"><div class="field-label">Departemen</div><input id="f_dept"></div>
+      </div>
+      <div class="field"><div class="field-label">Lokasi</div><input id="f_loc"></div>
+      <div class="grid2">
+        <div class="field"><div class="field-label">Merk</div><input id="f_brand"></div>
+        <div class="field"><div class="field-label">Status</div>
+          <select id="f_status"><option>Running</option><option>Idle</option><option>Breakdown</option><option>Maintenance</option></select></div>
+      </div>
+      <button class="btn-ghost" style="margin-bottom:12px">${icon('camera',14)} Ambil Foto Mesin</button>
+      <button class="btn-primary" onclick="saveMachine()">Simpan Mesin</button>
+    </div></div>`;
+  if(state.modal==='wo') return `
+    <div class="modal-backdrop"><div class="modal-sheet">
+      <div class="row" style="margin-bottom:12px">
+        <div style="font-size:15px;font-weight:700;color:var(--text)">Tambah WO ${state.woTab}</div>
+        <button onclick="closeModal()" style="background:var(--bg);border:none;width:28px;height:28px;border-radius:50%;color:var(--text);cursor:pointer">${icon('x',14)}</button>
+      </div>
+      <div class="field"><div class="field-label">Mesin</div>
+        <select id="f_machine">${state.machines.map(m=>`<option value="${m.id}">${m.id} · ${m.name}</option>`).join('')}</select></div>
+      <div class="field"><div class="field-label">Teknisi</div><input id="f_tech" placeholder="Andra S."></div>
+      <div class="field"><div class="field-label">Tanggal</div><input id="f_date" type="date"></div>
+      <div class="field"><div class="field-label">Catatan</div><textarea id="f_note" rows="3" placeholder="Gejala kerusakan / pekerjaan yang dilakukan..."></textarea></div>
+      <button class="btn-ghost" style="margin-bottom:12px">${icon('camera',14)} Foto Sebelum / Sesudah</button>
+      <button class="btn-primary" onclick="saveWO()">Simpan Work Order</button>
+    </div></div>`;
+  if(state.modal==='sparepart') return `
+    <div class="modal-backdrop"><div class="modal-sheet">
+      <div class="row" style="margin-bottom:12px">
+        <div style="font-size:15px;font-weight:700;color:var(--text)">Tambah Sparepart</div>
+        <button onclick="closeModal()" style="background:var(--bg);border:none;width:28px;height:28px;border-radius:50%;color:var(--text);cursor:pointer">${icon('x',14)}</button>
+      </div>
+      <div class="field"><div class="field-label">Nama Sparepart</div><input id="f_spname"></div>
+      <div class="grid2">
+        <div class="field"><div class="field-label">Kategori</div><input id="f_spcat"></div>
+        <div class="field"><div class="field-label">Satuan</div><input id="f_spunit" value="pcs"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><div class="field-label">Stock Awal</div><input id="f_spstock" type="number"></div>
+        <div class="field"><div class="field-label">Minimum Stock</div><input id="f_spmin" type="number"></div>
+      </div>
+      <div class="field"><div class="field-label">Harga Satuan (Rp)</div><input id="f_spprice" type="number"></div>
+      <button class="btn-primary" onclick="saveSparepart()">Simpan Sparepart</button>
+    </div></div>`;
+  return '';
+}
+
+/* ---------------- Actions ---------------- */
+function doLogin(){
+  const u=document.getElementById('loginUser').value;
+  const p=document.getElementById('loginPass').value;
+  if(u==='admin'&&p==='123'){ state.loggedIn=true; state.loginErr=''; }
+  else { state.loginErr='Username atau password salah. Coba admin / 123'; }
+  render();
+}
+function doLogout(){ state.loggedIn=false; state.view='dashboard'; render(); }
+function go(v){ state.view=v; render(); }
+function toggleDark(){ state.dark=!state.dark; render(); }
+function openModal(m){ state.modal=m; render(); }
+function closeModal(){ state.modal=null; render(); }
+
+function saveMachine(){
+  const name=document.getElementById('f_name').value;
+  if(!name) return;
+  const id='MC-'+String(state.machines.length+1).padStart(3,'0');
+  state.machines.unshift({
+    id,name,
+    cat:document.getElementById('f_cat').value,
+    dept:document.getElementById('f_dept').value,
+    loc:document.getElementById('f_loc').value,
+    brand:document.getElementById('f_brand').value,
+    status:document.getElementById('f_status').value,
+    year:2026,
+  });
+  state.modal=null; render();
+}
+function saveWO(){
+  const id='WO-2026-'+(state.wo.length+45);
+  state.wo.unshift({
+    id, type:state.woTab,
+    machine:document.getElementById('f_machine').value,
+    tech:document.getElementById('f_tech').value||'Andra S.',
+    date:document.getElementById('f_date').value||'2026-07-07',
+    status:'Open', downtime:0,
+  });
+  state.modal=null; render();
+}
+function saveSparepart(){
+  const name=document.getElementById('f_spname').value;
+  if(!name) return;
+  const id='SP-'+(1005+state.inventory.length);
+  state.inventory.unshift({
+    id,name,
+    cat:document.getElementById('f_spcat').value,
+    stock:Number(document.getElementById('f_spstock').value)||0,
+    min:Number(document.getElementById('f_spmin').value)||0,
+    unit:document.getElementById('f_spunit').value||'pcs',
+    price:Number(document.getElementById('f_spprice').value)||0,
+  });
+  state.modal=null; render();
+}
+function exportCsv(){
+  const rows=[['No WO','Tipe','Mesin','Teknisi','Tanggal','Status','Downtime']];
+  state.wo.forEach(w=>rows.push([w.id,w.type,w.machine,w.tech,w.date,w.status,w.downtime]));
+  const csv=rows.map(r=>r.join(',')).join('\n');
+  const blob=new Blob([csv],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='laporan_maintenance.csv'; a.click();
+  state.toast='Laporan CSV diunduh.'; render();
+  setTimeout(()=>{state.toast='';render();},2000);
+}
+
+/* ---------------- Titles & nav ---------------- */
+const TITLES={
+  dashboard:['Dashboard','Ringkasan hari ini'],
+  machines:['Master Data Mesin','Kelola unit mesin'],
+  workorders:['Maintenance','PM · Breakdown · Predictive'],
+  inventory:['Inventory Sparepart','Stok & pergudangan'],
+  kpi:['KPI Maintenance','MTBF · MTTR · Availability'],
+  reports:['Laporan','Export & rekap'],
+  settings:['Pengaturan','Tema & akun'],
+};
+const NAV=[['dashboard','home'],['machines','box'],['workorders','wrench'],['inventory','package'],['kpi','chart'],['settings','gear']];
+
+/* ---------------- Root render ---------------- */
+function render(){
+  const screen=document.getElementById('screen');
+  screen.className = state.dark ? 'screen dark' : 'screen';
+
+  let body='';
+  if(!state.loggedIn){
+    body = viewLogin();
+  } else {
+    const viewFns={dashboard:viewDashboard,machines:viewMachines,workorders:viewWorkOrders,inventory:viewInventory,kpi:viewKPI,reports:viewReports,settings:viewSettings};
+    body = `
+      <div class="topbar"><div class="title">${TITLES[state.view][0]}</div><div class="subtitle">${TITLES[state.view][1]}</div></div>
+      ${viewFns[state.view]()}
+      ${viewModal()}
+    `;
+  }
+
+  screen.innerHTML = `
+    <div class="statusbar ${state.loggedIn?'on':''}"><span>09:41</span><span class="mono">SMM</span></div>
+    <div class="content">${body}</div>
+    ${state.loggedIn?`
+    <div class="navbar">
+      ${NAV.map(([v,ic])=>`<button class="navitem" onclick="go('${v}')">
+        <span style="color:${state.view===v?'var(--primary)':'var(--muted)'}">${icon(ic,18)}</span>
+        <span class="navdot" style="background:${state.view===v?'var(--primary)':'transparent'}"></span>
+      </button>`).join('')}
+    </div>`:''}
+  `;
+}
+
+render();
+</script>
+</body>
+</html>
